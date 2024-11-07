@@ -248,12 +248,77 @@ def search_table(conn, table_name, id_value):
 
 
 # 사진 정보 저장 함수
-def save_image():
-    pass
+def save_image(conn, product_id, image_path):
+    try:
+        cur = conn.cursor()
+        if isinstance(product_id, str):
+            query = "SELECT product_id FROM product WHERE product_name = %s"
+            cur.execute(query, (product_id,))
+            result = cur.fetchone()
+
+            if result is None:
+                raise NullPointerException
+            else:
+                product_id = result[0]  # product_id 할당
+        
+        query = "INSERT INTO product_image (product_id, image_path) VALUES (%s, %s)"
+
+        query = "UPDATE product SET image = %s WHERE product_id = %s"
+        cur.execute(query, (image_path, product_id))
+        conn.commit()
+        return True
+
+    except NullPointerException as exception:
+        print("입력한 값이 존재하지 않습니다.")
+        conn.rollback()
+        return False
+    
+    except Exception as exception:
+        print(f"Exception: {exception}")
+        conn.rollback()
+        return False
+    
+    finally:
+        cur.close()
 
 # 사진 정보 불러오기 함수
-def load_image():
-    pass
+def load_image(conn, product_id):
+    try:
+        cur = conn.cursor()
+
+        # product_identifier가 문자열이면 제품명을 통해 product_id 조회
+        if isinstance(product_id, str):
+            query = "SELECT product_id FROM product WHERE product_name = %s"
+            cur.execute(query, (product_id,))
+            result = cur.fetchone()
+
+            if result is None:
+                raise NullPointerException
+            else:
+                product_id = result[0]
+
+        # product_id로 이미지 경로 조회
+        query = "SELECT image FROM product WHERE product_id = %s"
+        cur.execute(query, (product_id,))
+        result = cur.fetchone()
+
+        if result is None or result[0] is None:
+            print("이미지 경로가 존재하지 않거나 제품이 없습니다.")
+            return None
+        else:
+            return result[0]  # 이미지 경로 반환
+        
+    except NullPointerException as exception:
+        print("입력한 값이 존재하지 않습니다.")
+        return None
+
+
+    except Exception as exception:
+        print(f"Exception: {exception}")
+        return None
+
+    finally:
+        cur.close()
 
 # ---------------------------- 구분선 ----------------------------
 
@@ -368,7 +433,7 @@ def main():
     # 테이블 정보 조회 예시 (table_name, value_id) -> return값은 쿼리 결과(튜플)
     # 전체 값 조회
     categories = search_table(conn, "category", "all")
-    for category in categories:
+    for category in categories:  
         print(category)
 
     # 부분 값 조회
@@ -383,6 +448,12 @@ def main():
     delete_table(conn, "category", "취미") # category 삭제시 경고 메시지가 출력됨
     delete_table(conn, "product", "iPhone 16", True) # 경고 무시하고 삭제 (마지막 매개변수를 True로 변경)
     delete_table(conn, "product_detail", 15) # product_detail 삭제 (경고 메시지가 출력되지 않음)
+
+    # 이미지 정보 저장 및 불러오기 예시
+    insert_table(conn, "product", 2, "S24 Ultra", 1500)
+    save_image(conn, "S24 Ultra", "C:\\Users\\USER\\Desktop\\s24ultra")
+    image_path = load_image(conn, "S24 Ultra")
+    print(image_path)
     
     conn.close()  # 데이터베이스 연결 닫기
     
